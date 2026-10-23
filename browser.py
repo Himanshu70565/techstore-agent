@@ -7,13 +7,19 @@ from urllib.parse import quote
 
 from models import CartVerification, Goal, PageState, Product
 
-URL = "https://electronics-shopping-site.onrender.com/"
+URL = "https://electronics-shopping-site-1.onrender.com/"
 
 
 class BrowserAgent:
-    def __init__(self, page: Any, url: str = URL) -> None:
+    def __init__(self, page: Any, url: str = URL, diagnostic: Any | None = None) -> None:
         self.page = page
         self.url = url.rstrip("/") + "/"
+        self.diagnostic = diagnostic
+
+    def _diagnose(self, event: str, **data: Any) -> None:
+        diagnostic = getattr(self, "diagnostic", None)
+        if diagnostic is not None:
+            diagnostic(event, **data)
 
     def open(self) -> None:
         self.page.goto(self.url, wait_until="domcontentloaded", timeout=60_000)
@@ -27,10 +33,14 @@ class BrowserAgent:
         )
 
     def observe(self) -> PageState:
+        self._diagnose("observe_started", url=self.page.url)
         products: list[Product] = []
         for card in self.page.locator("#product-grid article.card").all():
             link = card.locator("h3 a").first
             price_text = card.locator(".price").inner_text()
+            description_locator = card.locator(
+                ".card-body p:not(.muted):not(.price)"
+            ).first
             products.append(
                 Product(
                     id=str(link.get_attribute("href") or "").rsplit("/", 1)[-1],
@@ -38,7 +48,7 @@ class BrowserAgent:
                     category=card.locator(".muted").inner_text().split("·")[-1].strip(),
                     brand=card.locator(".muted").inner_text().split("·")[0].strip(),
                     price=float(price_text.replace("NZ$", "").replace(",", "").strip()),
-                    description=card.locator(".card-body p").nth(2).inner_text().strip(),
+                    description=description_locator.inner_text().strip(),
                     availability=card.locator(".badge").inner_text().strip(),
                     url=str(link.get_attribute("href") or ""),
                 )
@@ -46,6 +56,16 @@ class BrowserAgent:
         if not products and self.page.locator("article.detail").count():
             product_id = self.page.url.rstrip("/").rsplit("/", 1)[-1]
             eyebrow = self.page.locator("article.detail .eyebrow").inner_text().split("·")
+            detail = self.page.locator("article.detail")
+            detail_content = detail.locator(":scope > div").nth(1)
+            description = detail_content.locator(
+                "p:not(.eyebrow):not(.price)"
+            ).first.inner_text()
+            specifications = {}
+            for row in detail.locator("table tr").all():
+                cells = [cell.inner_text().strip() for cell in row.locator("th, td").all()]
+                if len(cells) >= 2:
+                    specifications[cells[0]] = cells[-1]
             products.append(
                 Product(
                     id=product_id,
@@ -58,8 +78,9 @@ class BrowserAgent:
                         .replace("NZ$", "")
                         .strip()
                     ),
-                    description=self.page.locator("article.detail > div").last.locator("p").nth(2).inner_text().strip(),
+                    description=description.strip(),
                     availability=self.page.locator("article.detail .badge").inner_text().strip(),
+                    specifications=specifications,
                     url=f"/products/{product_id}",
                 )
             )
@@ -77,7 +98,40 @@ class BrowserAgent:
             controls=controls,
         )
 
+    def inspect_products(self, products: tuple[Product, ...]) -> tuple[Product, ...]:
+        """Visit each catalogue product and preserve its complete detail text."""
+        inspected: list[Product] = []
+        for product in products:
+            self._diagnose("product_inspection_started", product_id=product.id)
+            detail_state = self.open_product(product.id)
+            detail = next(
+                (item for item in detail_state.products if item.id == product.id),
+                None,
+            )
+            if detail is None:
+                raise RuntimeError(f"Could not inspect product {product.id}")
+            inspected.append(detail)
+            self._diagnose(
+                "product_description_observed",
+                product_id=product.id,
+                description_length=len(detail.description),
+            )
+            self.return_to_search_results()
+            self._diagnose("product_inspection_completed", product_id=product.id)
+        return tuple(inspected)
+
+    def return_to_search_results(self) -> None:
+        """Return to the existing search-results page after inspecting a product."""
+        self._diagnose("return_to_search_started", url=self.page.url)
+        if self.page.url.rstrip("/").startswith(f"{self.url.rstrip('/')}/products/"):
+            self.page.go_back(wait_until="domcontentloaded", timeout=60_000)
+        if not self.page.locator('input[name="search"]').count():
+            self.open()
+        self.page.wait_for_selector("#product-grid", timeout=30_000)
+        self._diagnose("return_to_search_completed", url=self.page.url)
+
     def search(self, value: str) -> PageState:
+        self._diagnose("search_started", value=value, url=self.page.url)
         field = self.page.locator('input[name="search"]')
         field.fill(value)
         self.page.get_by_role("button", name="Apply", exact=True).click()
@@ -89,12 +143,22 @@ class BrowserAgent:
             }""",
             timeout=15_000,
         )
-        return self.observe()
+        state = self.observe()
+        self._diagnose("search_completed", value=value, product_count=len(state.products))
+        return state
 
     def open_product(self, product_id: str) -> PageState:
+        self._diagnose("open_product_started", product_id=product_id, url=self.page.url)
         self.page.goto(f"{self.url}products/{quote(product_id, safe='')}", wait_until="domcontentloaded")
         self.page.wait_for_selector("article.detail", timeout=15_000)
-        return self.observe()
+        state = self.observe()
+        self._diagnose(
+            "open_product_completed",
+            product_id=product_id,
+            url=state.url,
+            product_count=len(state.products),
+        )
+        return state
 
     def compare_products(self, product_ids: list[str]) -> PageState:
         if len(product_ids) < 2:

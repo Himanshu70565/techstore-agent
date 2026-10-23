@@ -30,6 +30,9 @@ def validate_action(
     decision: Any,
     goal: Goal | None = None,
     state: PageState | None = None,
+    cart_verified: bool = False,
+    catalogue: tuple[Any, ...] = (),
+    inspected_product_ids: set[str] | None = None,
 ) -> tuple[bool, str]:
     """Validate an untrusted model decision before it reaches Playwright."""
     if not isinstance(decision, dict):
@@ -80,6 +83,17 @@ def validate_action(
 
     if action == "add_to_cart" and state is not None and product_id not in state.product_ids:
         return False, "Product must be observed before it can be added"
+
+    if action == "add_to_cart" and catalogue:
+        catalogue_ids = {product.id for product in catalogue}
+        if product_id not in catalogue_ids:
+            return False, "Product must belong to the collected catalogue"
+        if inspected_product_ids is not None and inspected_product_ids != catalogue_ids:
+            return False, "All catalogue products must be inspected before adding to cart"
+
+    if action == "finish" and goal is not None and goal.requested_action == "add_to_cart":
+        if not cart_verified:
+            return False, "Cannot finish a cart task before the cart has been verified"
 
     return True, "Action approved"
 

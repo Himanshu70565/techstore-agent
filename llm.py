@@ -9,7 +9,7 @@ from typing import Any
 from google import genai
 
 from models import Goal
-from prompts import GOAL_PROMPT, SYSTEM_INSTRUCTIONS, decision_prompt
+from prompts import GOAL_PROMPT, decision_prompt
 
 DEFAULT_MODEL = "gemini-3.5-flash-lite"
 
@@ -66,10 +66,16 @@ class GeminiReasoner:
             requested_action=data.get("requested_action", "add_to_cart"),
         )
 
-    def decide(self, goal: Goal, state: str, budget: int) -> dict[str, Any]:
+    def decide(
+        self,
+        goal: Goal,
+        state: str,
+        budget: int,
+        scenario_prompt: str,
+    ) -> dict[str, Any]:
         return self._generate(
             decision_prompt(goal.raw, state, [
                 "inspect_page", "search", "open_product", "compare_products",
                 "add_to_cart", "verify_cart", "finish",
-            ], budget)
+            ], budget, scenario_prompt)
         )

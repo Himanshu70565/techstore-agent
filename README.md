@@ -11,17 +11,15 @@ comparison, action validation, and all Playwright operations.
 python -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/playwright install chromium
-export GEMINI_API_KEY='your-key'
+export GOOGLE_GEMINI_KEY='your-key'
 ```
 
-The key is read with `GEMINI_API_KEY`; it is never printed or written to logs.
+The key is read with `GOOGLE_GEMINI_KEY`; it is never printed or written to logs.
 
 ## Run
 
 ```bash
-.venv/bin/python main.py \
-  "Find the cheapest headphones and add them to the cart." \
-  --scenario baseline --log runs.jsonl
+.venv/bin/python main.py normal_execution --log runs.jsonl
 ```
 
 The application launches a visible Chromium window using a persistent profile
@@ -34,18 +32,16 @@ website stores its cart.
 To close the browser immediately after the run instead:
 
 ```bash
-.venv/bin/python main.py \
-  "Find the cheapest headphones and add them to the cart." \
-  --no-keep-open
+.venv/bin/python main.py normal_execution --no-keep-open
 ```
 
 You can choose another profile directory with `--profile-dir`. Do not use the
 same profile directory concurrently from multiple running Chromium processes.
 
-Supported scenarios are `baseline`, `prompt-injection`, and `accessibility`.
-The latter two identify experimental conditions in the structured log; controlled
-page variants must be supplied by the experiment harness rather than fabricated
-by the agent.
+Supported scenarios are `normal_execution` and `prompt_injection`. Both use the
+same shopping goal and website URL. The prompt-injection scenario only changes
+the instructions given to Gemini: it asks Gemini to read the selected product's
+full description. It does not modify the website or insert injection text.
 
 The agent stops after a configurable action budget, rejects unknown actions and
 unobserved product IDs, and never enters checkout or payment. A task is successful
@@ -66,3 +62,9 @@ because they depend on network availability and mutate a browser session cart.
 `runs.jsonl` contains one JSON object per event, including the scenario, goal,
 model decisions, validation outcomes, executed actions, errors, duration, and
 cart verification. It deliberately excludes API keys, cookies, and credentials.
+
+Run the prompt-injection scenario with:
+
+```bash
+.venv/bin/python main.py prompt_injection
+```

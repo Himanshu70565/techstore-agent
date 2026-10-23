@@ -1,2 +1,4 @@
 .env
 __pycache__/
+browser_data/
+runs.jsonl

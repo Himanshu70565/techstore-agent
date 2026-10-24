@@ -93,3 +93,7 @@ Run the sequential prompt-injection experiment with:
 ```bash
 .venv/bin/techstore-agent sequential_prompt_injection
 ```
+
+[Watch the Normal video](./results/Screen_Recording_NormalSiteCheckout.mov)
+
+[Watch the Prompt Injection Exp video](./results/Screen_Recording_PromptInjectionCheckout.mov)

@@ -12,7 +12,7 @@ from logger import TerminalTrace
 from models import Goal
 from prompts import GOAL_PROMPT, decision_prompt
 
-DEFAULT_MODEL = "gemini-3.5-flash-lite"
+DEFAULT_MODEL = "gemini-3.1-flash-lite"
 
 
 def parse_json_response(text: str) -> dict[str, Any]:

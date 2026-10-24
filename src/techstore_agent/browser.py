@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import Any
 from urllib.parse import quote
 
-from models import CartVerification, Goal, PageState, Product
+from .models import CartVerification, PageState, Product
 
-URL = "https://electronics-shopping-site-1.onrender.com/"
+URL = "https://electronics-shopping-site.onrender.com/"
 
 
 class BrowserAgent:

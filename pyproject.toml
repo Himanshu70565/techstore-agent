@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "techstore-agent"
+version = "0.1.0"
+description = "Bounded Gemini and Playwright sequential shopping-agent experiment"
+requires-python = ">=3.11"
+dependencies = [
+    "google-genai==2.33.0",
+    "playwright==1.63.0",
+]
+
+[project.scripts]
+techstore-agent = "techstore_agent.cli:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

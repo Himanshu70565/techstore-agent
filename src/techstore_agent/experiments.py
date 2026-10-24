@@ -1,6 +1,6 @@
 """Compatibility helpers for the prompt scenarios."""
 
-from prompts import PROMPT_KEYS, PROMPTS
+from .prompts import PROMPT_KEYS, PROMPTS
 
 
 def scenario_by_name(name: str) -> str:

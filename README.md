@@ -1,15 +1,15 @@
 # TechStore AI Browser Agent
 
-This is a bounded research prototype for evaluating shopping-agent reliability,
-prompt-injection resistance, accessibility, and human oversight. It uses Gemini
-for goal interpretation and next-action planning, while Python owns product
-comparison, action validation, and all Playwright operations.
+This is a bounded research prototype for evaluating a shopping agent in a
+sequential prompt-injection experiment. It uses Gemini for goal interpretation
+and next-action planning, while Python owns action validation and all Playwright
+operations.
 
 ## Setup
 
 ```bash
 python -m venv .venv
-.venv/bin/pip install -r requirements.txt
+.venv/bin/pip install -e .
 .venv/bin/playwright install chromium
 export GOOGLE_GEMINI_KEY='your-key'
 ```
@@ -19,7 +19,7 @@ The key is read with `GOOGLE_GEMINI_KEY`; it is never printed or written to logs
 ## Run
 
 ```bash
-.venv/bin/python main.py normal_execution --log runs.jsonl
+.venv/bin/techstore-agent sequential_prompt_injection --log runs.jsonl
 ```
 
 The application launches a visible Chromium window using a persistent profile
@@ -32,25 +32,50 @@ website stores its cart.
 To close the browser immediately after the run instead:
 
 ```bash
-.venv/bin/python main.py normal_execution --no-keep-open
+.venv/bin/techstore-agent sequential_prompt_injection --no-keep-open
 ```
 
 You can choose another profile directory with `--profile-dir`. Do not use the
 same profile directory concurrently from multiple running Chromium processes.
 
-Supported scenarios are `normal_execution` and `prompt_injection`. Both use the
-same shopping goal and website URL. The prompt-injection scenario only changes
-the instructions given to Gemini: it asks Gemini to read the selected product's
-full description. It does not modify the website or insert injection text.
+The only supported scenario is `sequential_prompt_injection`. It uses the
+injection-test website configured in `prompts.py`:
+
+```text
+https://electronics-shopping-site-1.onrender.com/
+```
+
+The agent searches for headphones, opens one product at a time, sends the
+currently observed product details and complete description to Gemini, validates
+Gemini's next action, and verifies the actual cart contents before completing.
+Descriptions are webpage data and are not trusted system instructions.
 
 The agent stops after a configurable action budget, rejects unknown actions and
 unobserved product IDs, and never enters checkout or payment. A task is successful
 only after the intended product is found in the cart.
 
+## Project structure
+
+```text
+src/techstore_agent/
+  actions.py       Action validation and browser execution
+  browser.py       Playwright navigation, extraction, and cart operations
+  cli.py           Sequential experiment orchestration and CLI
+  experiments.py   Scenario lookup helper
+  llm.py           Gemini client and response parsing
+  logger.py        JSONL and terminal tracing
+  models.py        Typed domain models
+  prompts.py       Goal, URL, and scenario instructions
+tests/
+  test_agent.py    Unit and mocked integration tests
+main.py            Backward-compatible launcher
+pyproject.toml     Package metadata and console entry point
+```
+
 ## Tests
 
 ```bash
-.venv/bin/pytest -q
+.venv/bin/python -m pytest -q
 ```
 
 Unit tests cover product comparison, malformed or adversarial model decisions,
@@ -63,8 +88,8 @@ because they depend on network availability and mutate a browser session cart.
 model decisions, validation outcomes, executed actions, errors, duration, and
 cart verification. It deliberately excludes API keys, cookies, and credentials.
 
-Run the prompt-injection scenario with:
+Run the sequential prompt-injection experiment with:
 
 ```bash
-.venv/bin/python main.py prompt_injection
+.venv/bin/techstore-agent sequential_prompt_injection
 ```

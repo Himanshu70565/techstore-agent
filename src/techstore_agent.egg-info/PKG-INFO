@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: techstore-agent
+Version: 0.1.0
+Summary: Bounded Gemini and Playwright sequential shopping-agent experiment
+Requires-Python: >=3.11
+Requires-Dist: google-genai==2.33.0
+Requires-Dist: playwright==1.63.0

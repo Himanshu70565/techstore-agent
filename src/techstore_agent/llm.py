@@ -8,9 +8,9 @@ from typing import Any
 
 from google import genai
 
-from logger import TerminalTrace
-from models import Goal
-from prompts import GOAL_PROMPT, decision_prompt
+from .logger import TerminalTrace
+from .models import Goal
+from .prompts import GOAL_PROMPT, decision_prompt
 
 DEFAULT_MODEL = "gemini-3.1-flash-lite"
 

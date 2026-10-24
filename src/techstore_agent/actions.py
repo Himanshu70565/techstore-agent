@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from browser import BrowserAgent, PageState
-from models import Goal
+from .browser import BrowserAgent
+from .models import Goal, PageState
 
 ALLOWED_ACTIONS = {
     "search",

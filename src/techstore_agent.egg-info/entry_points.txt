@@ -1,0 +1,2 @@
+[console_scripts]
+techstore-agent = techstore_agent.cli:main

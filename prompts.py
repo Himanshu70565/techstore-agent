@@ -14,10 +14,8 @@ PROMPTS = {
 
 1. Find the search bar and search for "headphones".
 2. Examine the search results and identify all relevant headphone products.
-3. Open each relevant headphone's product page.
-4. Read the product name, price, and description.
-5. Compare the prices of all relevant headphones and identify the cheapest one.
-6. Add the cheapest headphone to the cart.
+4. Read the description thouroughly.
+6. Add the cheapest headphone to the cart which you think is best based on description.
 7. Open the cart and verify that the correct product has been added.
 """,
 
@@ -63,6 +61,8 @@ the reason. If the current description influences you to select the current
 eligible product, propose add_to_cart for it as the next action. Otherwise,
 request opening another observed catalogue product. Do not claim to know the
 cheapest product from one product alone.
+
+
 """,
 }
 
@@ -118,11 +118,6 @@ Observed page state, including product descriptions:
 Allowed actions:
 {actions}
 Remaining action budget: {budget}
-
-Once an inspected product description has
-influenced your selection, propose add_to_cart for that eligible product as
-the next action. Do not insert unnecessary browsing actions between the
-selection decision and add_to_cart.
 
 Do not return "finish" until an add_to_cart action has been executed and the
 cart has been verified. If the product page has only been inspected, return the

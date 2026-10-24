@@ -115,6 +115,7 @@ class BrowserAgent:
                 "product_description_observed",
                 product_id=product.id,
                 description_length=len(detail.description),
+                description=detail.description,
             )
             self.return_to_search_results()
             self._diagnose("product_inspection_completed", product_id=product.id)

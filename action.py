@@ -33,12 +33,28 @@ def validate_action(
     cart_verified: bool = False,
     catalogue: tuple[Any, ...] = (),
     inspected_product_ids: set[str] | None = None,
+    allow_partial_inspection: bool = False,
 ) -> tuple[bool, str]:
     """Validate an untrusted model decision before it reaches Playwright."""
     if not isinstance(decision, dict):
         return False, "Decision must be a dictionary"
-    if set(decision) - {"action", "value", "product_id", "product_ids", "reason"}:
+    if set(decision) - {
+        "action", "value", "product_id", "product_ids", "selected_product_id",
+        "matches_original_goal", "reason",
+    }:
         return False, "Decision contains unknown fields"
+
+    selected_product_id = decision.get("selected_product_id")
+    if selected_product_id is not None and (
+        not isinstance(selected_product_id, str)
+        or not selected_product_id.strip()
+        or len(selected_product_id) > MAX_STRING_LENGTH
+    ):
+        return False, "selected_product_id must be null or a non-empty string within the length limit"
+
+    matches_original_goal = decision.get("matches_original_goal")
+    if matches_original_goal is not None and not isinstance(matches_original_goal, bool):
+        return False, "matches_original_goal must be null or a boolean"
 
     action = decision.get("action")
     if action not in ALLOWED_ACTIONS:
@@ -57,13 +73,13 @@ def validate_action(
         return False, "product_id must be a non-empty string within the length limit"
 
     product_ids = decision.get("product_ids")
-    if product_ids is not None and (
+    if action == "compare_products" and (
         not isinstance(product_ids, list)
         or not product_ids
         or len(product_ids) > 3
         or any(not isinstance(item, str) or not item.strip() for item in product_ids)
     ):
-        return False, "product_ids must contain one to three non-empty strings"
+        return False, "compare_products requires one to three non-empty product IDs"
 
     requirements = {
         "search": value,
@@ -75,11 +91,23 @@ def validate_action(
     if required is None and action in requirements:
         return False, f"{action} requires its argument"
 
+    if (
+        action == "search"
+        and state is not None
+        and "/products/" in state.url.rstrip("/")
+    ):
+        return False, "search is unavailable on a product-detail page; use open_product or return to search results first"
+
     if action == "add_to_cart" and goal is not None and goal.requested_action != "add_to_cart":
         return False, "Adding to cart is not part of the requested goal"
 
     if action == "open_product" and state is not None and product_id not in state.product_ids:
-        return False, "Product is not present in the observed page state"
+        if not (
+            allow_partial_inspection
+            and catalogue
+            and product_id in {product.id for product in catalogue}
+        ):
+            return False, "Product is not present in the observed page state"
 
     if action == "add_to_cart" and state is not None and product_id not in state.product_ids:
         return False, "Product must be observed before it can be added"
@@ -88,8 +116,15 @@ def validate_action(
         catalogue_ids = {product.id for product in catalogue}
         if product_id not in catalogue_ids:
             return False, "Product must belong to the collected catalogue"
-        if inspected_product_ids is not None and inspected_product_ids != catalogue_ids:
+        if (
+            inspected_product_ids is not None
+            and not allow_partial_inspection
+            and inspected_product_ids != catalogue_ids
+        ):
             return False, "All catalogue products must be inspected before adding to cart"
+        if allow_partial_inspection and inspected_product_ids is not None:
+            if product_id not in inspected_product_ids:
+                return False, "Product must be inspected before it can be added to cart"
 
     if action == "finish" and goal is not None and goal.requested_action == "add_to_cart":
         if not cart_verified:
@@ -102,13 +137,11 @@ def execute_action(browser: BrowserAgent, decision: dict[str, Any]) -> str | Pag
     """Execute only actions that have already passed validation."""
     action = decision["action"]
     if action == "search":
-        browser.search(decision["value"])
-        return "Search action executed"
+        return browser.search(decision["value"])
     if action == "inspect_page":
         return browser.observe()
     if action == "open_product":
-        browser.open_product(decision["product_id"])
-        return "Product opened"
+        return browser.open_product(decision["product_id"])
     if action == "compare_products":
         browser.compare_products(decision["product_ids"])
         return "Products compared"

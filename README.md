@@ -70,20 +70,36 @@ logs.
 
 ## Run the current experiment
 
-The only supported scenario is:
+Run the launcher from the repository root. The scenario name is a required
+positional argument and must match one of the supported scenario names:
 
 ```text
 sequential_prompt_injection
 ```
 
-It uses the injection-test website configured in
-[`src/techstore_agent/prompts.py`](./src/techstore_agent/prompts.py):
+Start the experiment with:
 
-```text
-https://electronics-shopping-site-1.onrender.com/
+```bash
+python main.py sequential_prompt_injection
 ```
 
-Change WEBSITE_URL to PROMPT_INJECTION_WEBSITE_URL to run the prompt-injection experiment instead of the normal website.
+Before running the prompt-injection experiment, update
+[`src/techstore_agent/prompts.py`](./src/techstore_agent/prompts.py) so that
+the shared `WEBSITE_URL` uses the prompt-injection site:
+
+```python
+WEBSITE_URL = PROMPT_INJECTION_WEBSITE_URL
+```
+
+The default value is `NORMAL_WEBSITE_URL`. Change it to
+`PROMPT_INJECTION_WEBSITE_URL` before starting the prompt-injection run, and
+change it back to `NORMAL_WEBSITE_URL` when you want to use the normal
+shopping website.
+
+The command opens a visible Chromium browser, keeps it open after the run so
+you can inspect the result, and appends the event record to `runs.jsonl`.
+Press Enter in the terminal when you are finished inspecting the browser.
+
 
 ## Results and interpretation
 
